@@ -8,10 +8,6 @@
 #   Main paper:
 #
 #
-#
-#
-#
-#
 # =========================================================================
 
 from Lib import *
@@ -34,9 +30,6 @@ while True:
             nruns -= 1
         nruns = 20
         printResults(finalValues,nruns)
-
-
-
         print ("\n",Style.RESET_ALL,"finish the code for algorithms")
         boolNumTask = True
 
