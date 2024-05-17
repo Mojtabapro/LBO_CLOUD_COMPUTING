@@ -43,11 +43,11 @@ def LadyBugAlgorithm( maxNumber = 1000, numberTasks = 25 , numberFog = 20 , numb
 
     Coefficients = {'processingFee': 0.25,'costEfficiency': 0.25 ,'makeSpan': 0.5 }
     # Problem Definition
-   
+
     #tasks.sort(key=lambda task : task.getSize())
     nodes  = clouds + fogs
-    
-   # nodes.sort(key=lambda node : node.speedProcessing)
+
+# nodes.sort(key=lambda node : node.speedProcessing)
     parameters =6
     problem = {}
     problem['costfunc'] = sphere
@@ -86,16 +86,17 @@ def LadyBugAlgorithm( maxNumber = 1000, numberTasks = 25 , numberFog = 20 , numb
     bestsol["idTask"] = 0
     bestsol["idNode"] = 0
     bestsol["typeNode"] = 0
+
     #print (bestsol)
     # Initialize Population
     doTasks = []
     minMakespan = np.inf
-    workedNodes = []
+    mincost = np.inf
     population = []
     for i in tasks:
         population = []
         for j in nodes:
-            makespanJ = j.getAvailableTime() +i.getSize()/j.getSpeedProcessing()*1000
+            makespanJ = j.getAvailableTime() + (i.getSize()/j.getSpeedProcessing()*1000)
             if makespanJ < minMakespan:
                 minMakespan = makespanJ
             j.setMakeSpan(makespanJ)
@@ -103,126 +104,46 @@ def LadyBugAlgorithm( maxNumber = 1000, numberTasks = 25 , numberFog = 20 , numb
             pop['position'] = np.array([i.getSize(),j.getSpeedProcessing()
             ,j.getAvailableTime(),j.getProcessingFee(), j.getCostEfficiency()
             ,makespanJ]).tolist()
-            pop['cost'] = sphere(j) #costfunc(p['position'])
             pop["idTask"] = i.getId()
             pop["idNode"] = j.getId()
             pop["typeNode"] = j.getTypeNode()
-            population.append(pop)
 
-        min = inf
-
+        pop['cost'] =sphere(j)
+        if pop['cost'] < mincost:
+                mincost = pop['cost']
+        population.append(pop)
+        min = mincost
         doTaskByNode =None
         chosenPerson = None
+        doTaskByNode = None
+
         for  i in population:
-            if i['cost'] < min:
+            if i['cost'] <= min:
                 chosenPerson = i
-        doTaskByNode = {"idTask":chosenPerson['idTask'] ,
+                doTaskByNode = {"idTask":chosenPerson['idTask'] ,
                         "idNode":chosenPerson["idNode"] ,
                         "typeNode":chosenPerson["typeNode"]}
-
         task = tasks[doTaskByNode['idTask']-1]
         tempNode  = getNodeForCompute(nodes,doTaskByNode)
-        nodes = filterNodesForFetChanges(nodes , tempNode)
+        # nodes = filterNodesForFitChanges(nodes , tempNode)
 
 
         dictionaryComputeTaskNode=compute(tempNode , task)
-        nodes.append(dictionaryComputeTaskNode["Node"])
+
+        #nodes.append(dictionaryComputeTaskNode["Node"])
+        nodes=filterNodesForFitChanges(nodes , dictionaryComputeTaskNode["Node"])
+
         doTasks.append(dictionaryComputeTaskNode["Task"])
+
+        mincost = np.inf
+        population = []
+
+
+
     #nodes = normalizationByMakespan(nodes,minMakespan)
     finalClouds = list(filter(lambda node:  node.getTypeNode()==1, nodes))
     finalFogs = list(filter(lambda node:  node.getTypeNode()==2, nodes))
 
 
-
     mapResults=computeResults(doTasks, finalClouds, finalFogs , Coefficients)
     return mapResults
-
-
-
-
-
-
-
-
-
-
-#     # plt.plot(out['bestcost'])
-#     # plt.xlabel('NFE')
-#     # plt.ylabel('Best Cost')
-#     # plt.title('LBO algorithm')
-#     # plt.grid(True)
-#     # plt.show()
-
-
-
-
-
-
-
-#             NFE +=1
-#             if pop['cost'] < bestsol['cost']:
-#                 bestsol['position'] = pop['position']
-#                 bestsol['cost'] = pop['cost']
-#                 bestsol["idTask"] = pop['idTask']
-#                 bestsol["idNode"] = pop['idNode']
-#                 bestsol["typeNode"] = pop["typeNode"]
-#             for key, value in pop.items():
-#                 print(key, value)
-
-# ############# Start lbo algorithm for computing the best solution########
-#     population.sort(key=lambda x: x["cost"] , reverse = True)
-
-# Printing the sorted dictionary
-
-
-#     Best Cost of Iterations
-#     bestcost = []
-#     bestcost.append(bestsol['cost'])
-#     print(bestsol)
-
-#     it = 0
-
-
-#     main Loop
-#     while NFE < npop:
-#     # for it in range(maxit):
-
-#         costs = np.array([x['cost'] for x in population])
-#         SoC = sum(costs)
-#         avg_cost = np.mean(costs)
-#         if avg_cost != 0:
-#             costs = costs/avg_cost
-#         probs = np.exp(-beta*costs)
-
-#         newSol = []
-#         new = {}
-#         #for i in range(npop):
-#         new = {}
-#         new['cost'] = inf
-#         # Perform Roulette Wheel Selection
-#         j=0
-
-#         while (j<2*numberTasks/10 or j>max_NFE):
-#             j=roulette_wheel_selection(probs)
-#             print(j)
-#         # Perform Crossover
-#         if random.random()>0.2:
-#             Rnd = np.random.random()-0.5
-#             new['position'] = (np.array(population[j]['position'])
-#             +np.array((np.random.random(size=(1, nvar))
-#             *(np.array(population[j]['position'])-np.array(population[i]['position']))
-#             .tolist()).tolist()[0])+np.array(
-#             (np.random.random(size=(1, nvar))*
-#             (np.array(population[j-1]['position'])-np.array(population[j]['position']))
-#             .tolist()).tolist()[0])+
-#             np.array(
-#                 ([((abs(population[i]['cost']/SoC))**(-it/npop))*(Rnd)* el for el in
-#             ([element for element in population[j]['position']])])
-#             )
-#             ).tolist()
-
-#         else:
-#             new['position'] = mutate(population[i], 0.05*nvar, sigma)
-
-
-# ############# end lbo algorithm for computing the best solution########

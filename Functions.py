@@ -38,17 +38,17 @@ def setTasks(tasksArray = [], numberTasks = 10) :
         task = Task()
         task.setId(i)
         rand = getRandomInteger()
-        if rand % 3 == 0:
-            task.setSize(getRandomInteger()% 9901 + 100) #[100,10000] MI
-            task.setDeadline(getRandomInteger() % 401 + 100) #[100 , 500] ms
-        elif rand % 3 == 1:
-            task.setSize(getRandomInteger()% 3253 + 1028) #[1028,4280] MI
-            task.setDeadline(getRandomInteger() % 2001 + 500) #[500 , 2500] ms
-        elif rand % 3 == 2:
-            task.setSize(getRandomInteger()% 4662 + 5123) #[5123,9784] MI
-            task.setDeadline(getRandomInteger() % 7501 + 2500) #[2500 , 10000] ms
+        # if rand % 3 == 0:
+        task.setSize(getRandomInteger()% 9901 + 100) #[100,10000] MI
+        task.setDeadline(getRandomInteger() % 401 + 100) #[100 , 500] ms
+        # elif rand % 3 == 1:
+        #     task.setSize(getRandomInteger()% 3253 + 1028) #[1028,4280] MI
+        #     task.setDeadline(getRandomInteger() % 2001 + 500) #[500 , 2500] ms
+        # elif rand % 3 == 2:
+        #     task.setSize(getRandomInteger()% 4662 + 5123) #[5123,9784] MI
+        #     task.setDeadline(getRandomInteger() % 7501 + 2500) #[2500 , 10000] ms
         task.setMemory(getRandomInteger()%151 + 50)  #[50 , 200] MB
-        task.setPenalty(getRandomInteger()%50 + 1)
+        task.setPenalty((getRandomInteger()%50 + 1)/100)
         task.setQoS((getRandomInteger() % 1000 + 9000) / 100.0 )
         task.setInputFileSize(getRandomInteger() % 9901 + 100) ## [100kB , 10MB]
         task.setOutPutFileSize(getRandomInteger() % 991 + 1) ## [1kB , 1MB]
@@ -74,13 +74,13 @@ def setNodeClouds(nodeArray = [] , numberNodeClouds = 20):
         node = Node()
         node.setId(i)
         node.setTypeNode(1)# for CloudNode
-        node.setSpeedProcessing(getRandomInteger() % 2001 +300) # [3000 , 5000] MIPS
+        node.setSpeedProcessing(getRandomInteger() % 2001 +3000) # [3000 , 5000] MIPS
         node.setMemory(getRandomInteger()% 57345 + 8192) #[8192,65536] MB
         node.setSpeedInternet(getRandomInteger() % 9901 + 100) #[100 , 10000] Mbps
-        node.setProcessingFee((getRandomInteger()% 31 + 79) / 100) #[0.7,1] G&ps
+        node.setProcessingFee((getRandomInteger()% 31 + 70) / 100.0) #[0.7,1] G&ps
         node.setDelay(delayValue) #[200 , 500] ms
         node.setPowerMax(getRandomInteger()% 201 + 200) #[200,400] w
-        node.setPowerMin( node.getPowerMax() *0.6) #[40,100] w
+        node.setPowerMin( node.getPowerMax() *0.6)
         nodeArray.append(node)
         # printObjectProperties(node)
     return nodeArray
@@ -94,12 +94,12 @@ def setNodeFogs(fogArray = [] , numberFogs = 5):
         node.setId(i)
         node.setTypeNode(2) # for fogNode
         node.setSpeedProcessing(getRandomInteger() % 1001 +500) # [500 , 1500] MIPS
-        node.setMemory(getRandomInteger()% 8193 + 512) #[512,8192] MB
+        node.setMemory(getRandomInteger()% 101 + 150) #[512,8192] MB
         node.setSpeedInternet(getRandomInteger() % 991 + 10) #[10 , 1000] Mbps
         node.setProcessingFee((getRandomInteger()% 31 + 10) / 100) #[0.1,0.4] G&ps
         node.setDelay(getRandomInteger() % 10 + 1) #[1 , 10] ms
         node.setPowerMax(getRandomInteger()% 61 + 40) #[40,100] w
-        node.setPowerMin( node.getPowerMax() *0.6) #[40,100] w
+        node.setPowerMin( node.getPowerMax() *0.6)
         fogArray.append(node)
     # printObjectProperties(node)
     return fogArray
@@ -166,7 +166,7 @@ def setCostEfficiencyNormalizationForNode(nodeArray, MaxValue):
 def compute(Node , Task):
 
     timeExecute = Task.getSize() / Node.getSpeedProcessing()
-    Node.setAvailableTime( Node.getAvailableTime() +( timeExecute *1000 ))
+    Node.setAvailableTime( Node.getAvailableTime() +( timeExecute * 1000 ))
     Task.setResponse (Node.getAvailableTime() + Node.getDelay())
     Task.setIsDone(True)
     Node.setProcessCast (Node.getProcessCast() + timeExecute * Node.getProcessingFee() )
@@ -189,33 +189,31 @@ def computeResults(tasks, clouds, fogs , Coefficients  ) :
             temp  = diffResponseAndDelay
             totalPenalty += temp
         else : PDST + 1
-    tempq = temp * 100/ i.getDeadline() + i.getQoS() - 100
-    if tempq > 0 :
-        violationCost += (tempq *i.getPenalty())
+        tempq = temp * 100/ i.getDeadline() + i.getQoS() - 100
+        if tempq > 0 :
+            violationCost += (tempq *i.getPenalty())
 
 
     Makespan =0
-    for i in clouds:
-        availableTime = i.getAvailableTime()
-        if  availableTime > Makespan:
-            Makespan = i.getAvailableTime()
-        if availableTime < minExe :
-            minExe = availableTime
-        sumExe += availableTime
-
     for i in fogs:
         availableTime = i.getAvailableTime()
         if  availableTime > Makespan:
-            Makespan = i.getAvailableTime()
+            Makespan = availableTime
         if availableTime < minExe :
             minExe = availableTime
         sumExe += availableTime
 
+    for i in clouds:
+        availableTime = i.getAvailableTime()
+        if  availableTime > Makespan:
+            Makespan = availableTime
+        if availableTime < minExe :
+            minExe = availableTime
+        sumExe += availableTime
+
+
     avgExe = sumExe / (len(fogs) + len(clouds) )
-
-
-    DI =0
-    
+    DI =0 #degree of imbalance
     DI = 1.0 * (Makespan - minExe) / avgExe
 
     engCons = 0
@@ -276,12 +274,12 @@ def computeResults(tasks, clouds, fogs , Coefficients  ) :
 
 
     fitValue = 0
-    fitValue = (Coefficients['processingFee'] *min_engCons/engCons +
-       Coefficients['costEfficiency'] * min_procCost/procCost  +
-       Coefficients['makeSpan']   * minMakespan/Makespan * 1000)
+    # print(f"{Coefficients['processingFee'] *min_engCons/engCons} //{Coefficients['costEfficiency'] * min_procCost/procCost} //{Coefficients['makeSpan']   * minMakespan/Makespan * 1000}")
+
+    fitValue = (Coefficients['processingFee'] *min_engCons/engCons + Coefficients['costEfficiency'] * min_procCost/procCost  + Coefficients['makeSpan']   * minMakespan/Makespan * 1000)
 
 
-    sumMakespan = Makespan/1000
+    sumMakespan = Makespan/1000.0
     sumEngConst = engCons
     sumProcessCost = procCost
     sumFitValue = fitValue
@@ -293,8 +291,7 @@ def computeResults(tasks, clouds, fogs , Coefficients  ) :
     return mapResult
 
 
-def printResults(results, Nruns=1.0):
-    
+def printResults(results, Nruns=20):
     print(Fore.BLUE,"\n\n---------------RESULTS---------------")
     for key, value in results.items():
         print("     "+f"{Fore.CYAN}{key}",Fore.MAGENTA," : ",Fore.GREEN,F"{value/Nruns}")
@@ -306,8 +303,8 @@ def printResults(results, Nruns=1.0):
 
 
 
-def sphere(Node, Coefficients = {'processingFee': 0.25,'costEfficiency': 0.25 ,'makeSpan': 0.5, }):
-    return (Coefficients['processingFee'] * Node.getProcessingFee()
+def sphere(Node, Coefficients = {'powerEfficiency': 0.25,'costEfficiency': 0.25 ,'makeSpan': 0.5, }):
+    return (Coefficients['powerEfficiency'] * Node.getPowerEfficiency()
     + Coefficients['costEfficiency'] * Node.getCostEfficiency()
     + Coefficients['makeSpan'] * Node.getMakeSpan())
 
@@ -345,11 +342,11 @@ def roulette_wheel_selection(p):
     return ind[0][0]
 
 def getNodeForCompute(Nodes,doTaskByNode):
-    node = None
+    Node = None
     for node in Nodes:
         if node.getId() == doTaskByNode["idNode"] and node.getTypeNode() == doTaskByNode["typeNode"]:
             return node
-    return node
+    return Node
 
 
 def normalizationByMakespan( nodes , minMakespan):
@@ -360,17 +357,29 @@ def normalizationByMakespan( nodes , minMakespan):
     return nodes
 
 
-def filterNodesForFetChanges(nodes , targetNode):
-    finalNode = []
+def filterNodesForFitChanges(nodes , targetNode):
     for i in nodes :
         if (i.getId() == targetNode.getId()):
             if i.getTypeNode() == targetNode.getTypeNode():
-                continue
-        finalNode.append(i)
-    return finalNode
+                i.setAvailableTime(targetNode.getAvailableTime())
+                i.setProcessCast(targetNode.getProcessCast())
+                break
+                # Node.setAvailableTime( Node.getAvailableTime() +( timeExecute *1000 ))
+                # Task.setResponse (Node.getAvailableTime() + Node.getDelay())
+                # Task.setIsDone(True)
+                # Node.setProcessCast (Node.getProcessCast() + timeExecute * Node.getProcessingFee() )
+        # finalNode.append(i)
+    return nodes
 
 
 def addValuesInNruns(finalValues , values) :
     for key  , value in values.items():
         finalValues[key] = finalValues.get(key, 0) + value
     return finalValues
+
+
+
+def fliterforMakespan(nodes, mainMakspan):
+    for i in nodes :
+        i.setMakeSpan(mainMakspan/i.getMakeSpan())
+    return nodes
