@@ -41,6 +41,9 @@ def LadyBugAlgorithm( maxNumber = 1000, numberTasks = 25 , numberFog = 20 , numb
     fogs = setPowerEfficiencyNormalizationForNode(fogs,mapMaxPowerEfficiencyForFogs['value'] )
     fogs = setCostEfficiencyNormalizationForNode(fogs,mapCostEfficiencyForFogs['value'])
 
+
+
+
     Coefficients = {'processingFee': 0.25,'costEfficiency': 0.25 ,'makeSpan': 0.5 }
     # Problem Definition
 
@@ -48,7 +51,7 @@ def LadyBugAlgorithm( maxNumber = 1000, numberTasks = 25 , numberFog = 20 , numb
     nodes  = clouds + fogs
 
 # nodes.sort(key=lambda node : node.speedProcessing)
-    parameters =6
+    parameters = 7
     problem = {}
     problem['costfunc'] = sphere
     problem['nvar'] = parameters
@@ -92,31 +95,45 @@ def LadyBugAlgorithm( maxNumber = 1000, numberTasks = 25 , numberFog = 20 , numb
     doTasks = []
     minMakespan = np.inf
     mincost = np.inf
+    pop = {}
     population = []
-    for i in tasks:
-        population = []
-        for j in nodes:
-            makespanJ = j.getAvailableTime() + (i.getSize()/j.getSpeedProcessing()*1000)
+
+
+    for i in range(0,len(tasks)):
+        for j in range(0, len(nodes)):
+            makespanJ = nodes[j].getAvailableTime() + (tasks[i].getSize()/nodes[j].getSpeedProcessing()*1000)
             if makespanJ < minMakespan:
                 minMakespan = makespanJ
-            j.setMakeSpan(makespanJ)
-            pop = {}
-            pop['position'] = np.array([i.getSize(),j.getSpeedProcessing()
-            ,j.getAvailableTime(),j.getProcessingFee(), j.getCostEfficiency()
-            ,makespanJ]).tolist()
-            pop["idTask"] = i.getId()
-            pop["idNode"] = j.getId()
-            pop["typeNode"] = j.getTypeNode()
+            nodes[j].setMakeSpan(makespanJ)
+            pop['position'] = np.array([tasks[i].getSize(),
+                                        nodes[j].getSpeedProcessing(),
+                                        nodes[j].getAvailableTime(),
+                                        nodes[j].getProcessingFee(),
+                                        nodes[j].getPowerEfficiency(),
+                                        nodes[j].getCostEfficiency(),
+                                        # add makespan
+                                        ]).tolist()
+            pop["idTask"] = tasks[i].getId()
+            pop["idNode"] =  nodes[j].getId()
+            pop["typeNode"] =  nodes[j].getTypeNode()
+            pop["cost"] = 0
+            population.append(pop)
+            pop ={}
 
-        pop['cost'] =sphere(j)
-        if pop['cost'] < mincost:
-                mincost = pop['cost']
-        population.append(pop)
+        nodes = normalizationByMakespan( nodes , minMakespan)
+        for i in population:
+            getNode = {"idNode":i["idNode"] ,
+                        "typeNode":i["typeNode"]}
+            nodeforcost  = getNodeForCompute(nodes,getNode)
+            i['cost'] =1/sphere(nodeforcost)
+            i["position"].append(nodeforcost.getMakeSpan())
+            if i['cost'] < mincost:
+                    mincost = i['cost']
+
         min = mincost
         doTaskByNode =None
         chosenPerson = None
         doTaskByNode = None
-
         for  i in population:
             if i['cost'] <= min:
                 chosenPerson = i
@@ -127,16 +144,17 @@ def LadyBugAlgorithm( maxNumber = 1000, numberTasks = 25 , numberFog = 20 , numb
         tempNode  = getNodeForCompute(nodes,doTaskByNode)
         # nodes = filterNodesForFitChanges(nodes , tempNode)
 
-
         dictionaryComputeTaskNode=compute(tempNode , task)
-
         #nodes.append(dictionaryComputeTaskNode["Node"])
         nodes=filterNodesForFitChanges(nodes , dictionaryComputeTaskNode["Node"])
+        tasks =filterTasksForFitChanges(tasks, dictionaryComputeTaskNode["Task"] )
 
         doTasks.append(dictionaryComputeTaskNode["Task"])
 
         mincost = np.inf
         population = []
+        pop ={}
+        minMakespan= np.inf
 
 
 
@@ -144,6 +162,19 @@ def LadyBugAlgorithm( maxNumber = 1000, numberTasks = 25 , numberFog = 20 , numb
     finalClouds = list(filter(lambda node:  node.getTypeNode()==1, nodes))
     finalFogs = list(filter(lambda node:  node.getTypeNode()==2, nodes))
 
+    listMaxPE = {
+            'indexCloud' : mapMaxPowerEfficiencyForClouds['index'],
+            "valueCloud":mapMaxPowerEfficiencyForClouds['value'],
+            'indexFog':mapMaxPowerEfficiencyForFogs['index'],
+            "valueFog":mapMaxPowerEfficiencyForFogs['value']
+    }
 
-    mapResults=computeResults(doTasks, finalClouds, finalFogs , Coefficients)
+    listMaxCE = {
+            'indexCloud':mapCostEfficiencyForClouds['index'],
+            "valueCloud":mapCostEfficiencyForClouds['value'],
+            'indexFog':mapCostEfficiencyForFogs['index'],
+            "valueFog":mapCostEfficiencyForFogs['value']
+    }
+
+    mapResults=computeResults(doTasks, finalClouds, finalFogs , Coefficients, listMaxPE , listMaxCE)
     return mapResults

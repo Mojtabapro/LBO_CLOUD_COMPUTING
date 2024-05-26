@@ -53,6 +53,7 @@ def setTasks(tasksArray = [], numberTasks = 10) :
         task.setInputFileSize(getRandomInteger() % 9901 + 100) ## [100kB , 10MB]
         task.setOutPutFileSize(getRandomInteger() % 991 + 1) ## [1kB , 1MB]
         tasksArray.append(task)
+
         #printObjectProperties(task)
     return tasksArray
 
@@ -65,6 +66,26 @@ def printObjectProperties(object):
     for key, value in properties.items():
         print(Fore.YELLOW , key,Fore.CYAN, ":",Fore.GREEN, value )
     print(Fore.RESET,'\n')
+
+
+
+
+
+def setNodeFogs(fogArray = [] , numberFogs = 5):
+    for i in range(1, numberFogs + 1 , 1):
+        node = Node()
+        node.setId(i)
+        node.setTypeNode(2) # for fogNode
+        node.setSpeedProcessing(getRandomInteger() % 1001 +500) # [500 , 1500] MIPS
+        node.setMemory(getRandomInteger()% 101 + 150) #[512,8192] MB
+        node.setSpeedInternet(getRandomInteger() % 991 + 10) #[10 , 1000] Mbps
+        node.setProcessingFee((getRandomInteger()% 31 + 10) / 100) #[0.1,0.4] G&ps
+        node.setDelay(getRandomInteger() % 10 + 1) #[1 , 10] ms
+        node.setPowerMax(getRandomInteger()% 61 + 40) #[40,100] w
+        node.setPowerMin( node.getPowerMax() *0.6)
+        fogArray.append(node)
+    # printObjectProperties(node)
+    return fogArray
 
 
 
@@ -88,21 +109,6 @@ def setNodeClouds(nodeArray = [] , numberNodeClouds = 20):
 
 
 
-def setNodeFogs(fogArray = [] , numberFogs = 5):
-    for i in range(1, numberFogs + 1 , 1):
-        node = Node()
-        node.setId(i)
-        node.setTypeNode(2) # for fogNode
-        node.setSpeedProcessing(getRandomInteger() % 1001 +500) # [500 , 1500] MIPS
-        node.setMemory(getRandomInteger()% 101 + 150) #[512,8192] MB
-        node.setSpeedInternet(getRandomInteger() % 991 + 10) #[10 , 1000] Mbps
-        node.setProcessingFee((getRandomInteger()% 31 + 10) / 100) #[0.1,0.4] G&ps
-        node.setDelay(getRandomInteger() % 10 + 1) #[1 , 10] ms
-        node.setPowerMax(getRandomInteger()% 61 + 40) #[40,100] w
-        node.setPowerMin( node.getPowerMax() *0.6)
-        fogArray.append(node)
-    # printObjectProperties(node)
-    return fogArray
 
 
 
@@ -175,7 +181,7 @@ def compute(Node , Task):
 
     return Computes
 
-def computeResults(tasks, clouds, fogs , Coefficients  ) :
+def computeResults(tasks, clouds, fogs, Coefficients, listMaxPE , listMaxCE):
     violationCost = 0
     PDST = 0
     totalPenalty =0
@@ -224,7 +230,7 @@ def computeResults(tasks, clouds, fogs , Coefficients  ) :
         + (Makespan /1000 - i.getAvailableTime()/ 1000 ) * i.getPowerMin()
 
         i.setEnergy(energy)
-        engCons += i.getEnergy()
+        engCons += energy
         procCost += i.getProcessCast()
 
 
@@ -233,7 +239,7 @@ def computeResults(tasks, clouds, fogs , Coefficients  ) :
         + (Makespan /1000 - i.getAvailableTime()/ 1000 ) * i.getPowerMin()
 
         i.setEnergy(energy)
-        engCons += i.getEnergy()
+        engCons += energy
         procCost += i.getProcessCast()
 
     totalTaskSize = 0
@@ -247,29 +253,53 @@ def computeResults(tasks, clouds, fogs , Coefficients  ) :
 
     minMakespan = 1.0 * totalTaskSize / totalCPU
 
-    MaxPowerEfficiencyFogs = getMaxPowerEfficiencyForNode(fogs)["value"]
-    MaxPowerEfficiencyClouds = getMaxPowerEfficiencyForNode(clouds)["value"]
+    # MaxPowerEfficiencyFogs = getMaxPowerEfficiencyForNode(fogs)["value"]
+    # MaxPowerEfficiencyClouds = getMaxPowerEfficiencyForNode(clouds)["value"]
+
+    # listMaxPE = {
+    #         'indexCloud' : mapMaxPowerEfficiencyForClouds['index'],
+    #         "valueCloud":mapMaxPowerEfficiencyForClouds['value'],
+    #         'indexFog':mapMaxPowerEfficiencyForFogs['index'],
+    #         "valueFog":mapMaxPowerEfficiencyForFogs['value']
+    # }
+
+    # listMaxCE = {
+    #         'indexCloud':mapCostEfficiencyForClouds['index'],
+    #         "valueCloud":mapCostEfficiencyForClouds['value'],
+    #         'indexFog':mapCostEfficiencyForFogs['index'],
+    #         "valueFog":mapCostEfficiencyForFogs['value']
+    # }
 
     min_engCons =0
-    if MaxPowerEfficiencyFogs > MaxPowerEfficiencyClouds :
-        index = getMaxPowerEfficiencyForNode(fogs)["index"]
+
+    # if MaxPowerEfficiencyFogs > MaxPowerEfficiencyClouds :
+    #     index = getMaxPowerEfficiencyForNode(fogs)["index"]
+
+    if listMaxPE["valueFog"] > listMaxPE["valueCloud"] :
+        index = listMaxPE['indexFog']
         min_engCons = 1.0 * totalTaskSize/fogs[index].getSpeedProcessing() * fogs[index].getPowerMax()
 
     else :
-        index = getMaxPowerEfficiencyForNode(clouds)["index"]
+        index = listMaxPE['indexCloud']
+        # index = getMaxPowerEfficiencyForNode(clouds)["index"]
         min_engCons = 1.0 * totalTaskSize/clouds[index].getSpeedProcessing() * clouds[index].getPowerMax()
 
 
 
     MaxCostEfficiencyFogs= getMaxCostEfficiencyForNode(fogs)["value"]
     MaxCostEfficiencyClouds = getMaxCostEfficiencyForNode(clouds)["value"]
+
     min_procCost = 0
-    if MaxCostEfficiencyFogs > MaxCostEfficiencyClouds :
-        index = getMaxCostEfficiencyForNode(fogs)["index"]
+    # if MaxCostEfficiencyFogs > MaxCostEfficiencyClouds :
+    # index = getMaxCostEfficiencyForNode(fogs)["index"]
+
+    if listMaxCE["valueFog"] > listMaxCE["valueCloud"]:
+        index = listMaxCE["indexFog"]
         min_procCost = 1.0 * totalTaskSize/fogs[index].getSpeedProcessing() * fogs[index].getProcessingFee()
 
     else :
-        index = getMaxCostEfficiencyForNode(clouds)["index"]
+        # index = getMaxCostEfficiencyForNode(clouds)["index"]
+        index = listMaxCE["indexCloud"]
         min_procCost = 1.0 * totalTaskSize/clouds[index].getSpeedProcessing() * clouds[index].getProcessingFee()
 
 
@@ -300,18 +330,16 @@ def printResults(results, Nruns=20):
 
 
 
+# print(f"{Coefficients['processingFee'] *Node.getPowerEfficiency()} //{ Node.getCostEfficiency()} //{Coefficients['makeSpan']   * Node.getMakeSpan()}")
+#     print(Coefficients['processingFee'] * Node.getPowerEfficiency()
+#     + Coefficients['costEfficiency'] * Node.getCostEfficiency()
+#     + Coefficients['makeSpan'] * Node.getMakeSpan())
 
 
-
-def sphere(Node, Coefficients = {'powerEfficiency': 0.25,'costEfficiency': 0.25 ,'makeSpan': 0.5, }):
-    return (Coefficients['powerEfficiency'] * Node.getPowerEfficiency()
+def sphere(Node, Coefficients = {'processingFee': 0.25,'costEfficiency': 0.25 ,'makeSpan': 0.5, }):
+    return (Coefficients['processingFee'] * Node.getPowerEfficiency()
     + Coefficients['costEfficiency'] * Node.getCostEfficiency()
     + Coefficients['makeSpan'] * Node.getMakeSpan())
-
-
-
-
-
 
 def mutate(x, mu, sigma):
     y = {}
@@ -346,23 +374,25 @@ def getNodeForCompute(Nodes,doTaskByNode):
     for node in Nodes:
         if node.getId() == doTaskByNode["idNode"] and node.getTypeNode() == doTaskByNode["typeNode"]:
             return node
+    print("not found node")
     return Node
 
 
 def normalizationByMakespan( nodes , minMakespan):
     for i in range(0 , len(nodes)):
         makespan =nodes[i].getMakeSpan()
-        nodes[i].setMakeSpan( makespan / minMakespan)
-
+        nodes[i].setMakeSpan( minMakespan / makespan )
     return nodes
 
 
+
+
 def filterNodesForFitChanges(nodes , targetNode):
-    for i in nodes :
-        if (i.getId() == targetNode.getId()):
-            if i.getTypeNode() == targetNode.getTypeNode():
-                i.setAvailableTime(targetNode.getAvailableTime())
-                i.setProcessCast(targetNode.getProcessCast())
+    for i in range(0,len(nodes)) :
+        if (nodes[i].getId() == targetNode.getId()):
+            if nodes[i].getTypeNode() == targetNode.getTypeNode():
+                nodes[i].setAvailableTime(targetNode.getAvailableTime())
+                nodes[i].setProcessCast(targetNode.getProcessCast())
                 break
                 # Node.setAvailableTime( Node.getAvailableTime() +( timeExecute *1000 ))
                 # Task.setResponse (Node.getAvailableTime() + Node.getDelay())
@@ -370,6 +400,19 @@ def filterNodesForFitChanges(nodes , targetNode):
                 # Node.setProcessCast (Node.getProcessCast() + timeExecute * Node.getProcessingFee() )
         # finalNode.append(i)
     return nodes
+
+def filterTasksForFitChanges(tasks , targetTask):
+    for i in range(0,len(tasks)):
+        if (tasks[i].getId() == targetTask.getId()):
+            tasks[i].setResponse(targetTask.getResponse())
+            tasks[i].setIsDone(True)
+            break
+                # Node.setAvailableTime( Node.getAvailableTime() +( timeExecute *1000 ))
+                # Task.setResponse (Node.getAvailableTime() + Node.getDelay())
+                # Task.setIsDone(True)
+                # Node.setProcessCast (Node.getProcessCast() + timeExecute * Node.getProcessingFee() )
+        # finalNode.append(i)
+    return tasks
 
 
 def addValuesInNruns(finalValues , values) :
